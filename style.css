@@ -13,7 +13,9 @@ body {
 #tictactoe {
   display: grid;
   place-items: center;
-  grid-template: repeat(3, 50px) / repeat(3, 50px);
+  grid-template: repeat(3, 100px) / repeat(3, 100px);
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
 }
 #tictactoe div {
   border: 1px solid #ccc;
@@ -21,4 +23,6 @@ body {
   place-items: center;
   width: 100%;
   height: 100%;
+  border-right: none;
+  border-bottom: none;
 }
