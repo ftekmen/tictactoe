@@ -35,7 +35,9 @@ const game = (() => {
   let end = false;
 
   const start = () => {
-    gameboard.clearBoard();
+    gameBoard.clearBoard();
+    displayController.renderBoard();
+    displayController.markerSelection();
   };
 
   const checkWin = () => {
@@ -58,11 +60,12 @@ const game = (() => {
 })();
 
 const displayController = (() => {
-  const render = (board) => {
-    boardHTML = board.map(field => {
-      const fieldHTML = document.createElement('div');
-      fieldHTML.textContent = field;
-      return fieldHTML;
+  const createBoard = () => {
+    const boardHTML = gameBoard.getBoard().map(tile => {
+      const tileHTML = document.createElement('div');
+      tileHTML.className = 'tile';
+      tileHTML.textContent = tile;
+      return tileHTML;
     });
 
     const wrapperHTML = document.querySelector("#tictactoe");
@@ -73,10 +76,45 @@ const displayController = (() => {
     return wrapperHTML;
   };
 
-  return { render };
+  const renderBoard = () => {
+    const tilesHTML = document.querySelectorAll("#tictactoe div");
+    gameBoard.getBoard().map((tile, index) => {
+      tilesHTML[index].textContent = tile;
+    });
+  };
+
+  const markerSelection = () => {
+    const overlay = document.querySelector('#tictactoe .overlay');
+
+    if (overlay === null) {
+      const board = document.querySelector('#tictactoe');
+
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+
+      const buttonWrapper = document.createElement('div');
+
+      const xButton = document.createElement('button');
+      xButton.className = 'x-button';
+      xButton.textContent = 'X';
+
+      const oButton = document.createElement('button');
+      oButton.className = 'o-button';
+      oButton.textContent = 'O';
+
+      buttonWrapper.appendChild(xButton);
+      buttonWrapper.appendChild(oButton);
+
+      overlay.appendChild(buttonWrapper);
+
+      board.appendChild(overlay);
+    }
+  };
+
+  return { createBoard, renderBoard, markerSelection };
 })();
 
-console.log(displayController.render(gameBoard.getBoard()));
+displayController.createBoard();
 
 const player = (name, marker) => {
   const getName = () => {
@@ -94,3 +132,8 @@ const player = (name, marker) => {
 
   return { getName, getMarker, markTheBoard };
 };
+
+const startButton = document.querySelector('#start button');
+startButton.addEventListener('click', (e) => {
+  game.start();
+});
