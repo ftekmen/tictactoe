@@ -1,20 +1,18 @@
-const gameBoard = (() => {
+const GameBoard = (() => {
   const board = Array(9).fill('X');
 
-  const getBoard = () => {
-    return board;
-  };
+  const getBoard = () => board;
 
-  const getBoardField = (field) => {
-    return board[field];
-  };
+  const getBoardField = (field) => board[field];
 
-  const setBoard = (pos, val) => {
-    board[pos] = val;
-  };
+  const setBoard = (pos, val) => board[pos] = val;
 
-  const clearBoard = () => {
-    board.fill('');
+  const clearBoard = () => board.fill('');
+
+  const freeTilesCount = () => {
+    return board.reduce((sum, tile) => {
+      sum = !tile ? sum++ : sum;
+    }, 0);
   };
 
   const countMarkers = (() => {
@@ -25,45 +23,63 @@ const gameBoard = (() => {
     return { x, o };
   })();
 
-  return { getBoard, getBoardField, setBoard, clearBoard, countMarkers };
+  return { getBoard, getBoardField, setBoard, clearBoard, freeTilesCount, countMarkers };
 })();
 
-const game = (() => {
+const Game = (() => {
   const winnerPattern = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7], [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]];
   let winner = '';
+  let result = '';
   let moveNo = 0;
-  let end = false;
+  let end;
 
   const start = () => {
-    gameBoard.clearBoard();
-    displayController.renderBoard();
-    displayController.markerSelection();
+    end = false;
+    GameBoard.clearBoard();
+    DisplayController.renderBoard();
+    DisplayController.markerSelection();
   };
 
   const checkWin = () => {
     if (moveNo >= 5) {
-      winnerPattern.forEach(pattern => {
-        if (pattern.every(item => gameBoard.getBoardField(item) === 'X' || gameBoard.getBoardField(item) === 'O')) {
+      for (const pattern of winnerPattern) {
+        if (pattern.every(item => GameBoard.getBoardField(item) === 'X' || GameBoard.getBoardField(item) === 'O')) {
           winner = pattern[0];
+          result = `Winner is ${winner}!`;
           finish();
-          return;
+          return winner;
         }
-      })
+
+        if (GameBoard.freeTilesCount() === 0 && !winner) {
+          result = 'Tie!';
+          finish();
+          return 'tie';
+        }
+      }
     }
+
+    return false;
   };
 
-  const finish = () => {
-    end = true;
-  }
+  const getWinner = () => winner;
 
-  return { start, checkWin };
+  const getResult = () => result;
+
+  const setMoveNo = () => moveNo++;
+
+  const getMoveNo = () => moveNo;
+
+  const finish = () => end = true;
+
+  return { start, checkWin, getWinner, getResult, setMoveNo, getMoveNo };
 })();
 
-const displayController = (() => {
+const DisplayController = (() => {
   const createBoard = () => {
-    const boardHTML = gameBoard.getBoard().map(tile => {
+    const boardHTML = GameBoard.getBoard().map((tile, index) => {
       const tileHTML = document.createElement('div');
       tileHTML.className = 'tile';
+      tileHTML.setAttribute('data-no', index);
       tileHTML.textContent = tile;
       return tileHTML;
     });
@@ -78,7 +94,7 @@ const displayController = (() => {
 
   const renderBoard = () => {
     const tilesHTML = document.querySelectorAll("#tictactoe div");
-    gameBoard.getBoard().map((tile, index) => {
+    GameBoard.getBoard().map((tile, index) => {
       tilesHTML[index].textContent = tile;
     });
   };
@@ -91,6 +107,10 @@ const displayController = (() => {
 
       const overlay = document.createElement('div');
       overlay.className = 'overlay';
+
+      const labelPlayerSelection = document.createElement('span');
+      labelPlayerSelection.textContent = 'Select Player'
+      overlay.appendChild(labelPlayerSelection);
 
       const buttonWrapper = document.createElement('div');
 
@@ -111,29 +131,52 @@ const displayController = (() => {
     }
   };
 
-  return { createBoard, renderBoard, markerSelection };
-})();
-
-displayController.createBoard();
-
-const player = (name, marker) => {
-  const getName = () => {
-    return name;
+  const removeMarkerSelection = () => {
+    const board = document.querySelector('#tictactoe');
+    const markerSelectionHTML = board.querySelector('.overlay');
+    board.removeChild(markerSelectionHTML);
   };
 
-  const getMarker = () => {
-    return marker;
-  }
+  return { createBoard, renderBoard, markerSelection, removeMarkerSelection };
+})();
+
+const Player = (marker) => {
+  const getMarker = () => marker;
 
   const markTheBoard = (pos) => {
-    gameBoard.setBoard(pos, val);
-    game.checkWin();
+    GameBoard.setBoard(pos, getMarker());
+    Game.setMoveNo();
+    Game.checkWin();
+    DisplayController.renderBoard();
   }
 
-  return { getName, getMarker, markTheBoard };
+  return { getMarker, markTheBoard };
 };
 
+DisplayController.createBoard();
+
+// Start Game
 const startButton = document.querySelector('#start button');
 startButton.addEventListener('click', (e) => {
-  game.start();
+  Game.start();
+});
+
+let human, computer;
+
+// Select Player Marker
+const playerSelection = document.querySelector('#tictactoe');
+playerSelection.addEventListener('click', (e) => {
+  if (e.target.className === 'x-button') {
+    [human, computer] = [Player('X'), Player('O')];
+    DisplayController.removeMarkerSelection();
+    return;
+  } else if (e.target.className === 'o-button') {
+    [human, computer] = [Player('O'), Player('X')];
+    DisplayController.removeMarkerSelection();
+    return;
+  }
+
+  const clickedTileHTML = e.target;
+  const clickedTileNo = clickedTileHTML.getAttribute('data-no');
+  human.markTheBoard(clickedTileNo);
 });
