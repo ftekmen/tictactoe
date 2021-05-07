@@ -11,67 +11,90 @@ const GameBoard = (() => {
 
   const freeTilesCount = () => {
     return board.reduce((sum, tile) => {
-      sum = !tile ? sum++ : sum;
+      return sum = !tile ? ++sum : sum;
     }, 0);
   };
 
-  const countMarkers = (() => {
-    let x = 0, o = 0;
-
-    getBoard().forEach(field => field === 'X' ? x++ : o++);
-
-    return { x, o };
-  })();
-
-  return { getBoard, getBoardField, setBoard, clearBoard, freeTilesCount, countMarkers };
+  return { getBoard, getBoardField, setBoard, clearBoard, freeTilesCount };
 })();
 
 const Game = (() => {
   const winnerPattern = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7], [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]];
-  let winner = '';
-  let result = '';
-  let moveNo = 0;
-  let end;
+  let message = '';
+  const scores = {
+    X: 1,
+    O: -1,
+    tie: 0
+  };
 
   const start = () => {
-    end = false;
     GameBoard.clearBoard();
     DisplayController.renderBoard();
     DisplayController.markerSelection();
   };
 
   const checkWin = () => {
-    if (moveNo >= 5) {
-      for (const pattern of winnerPattern) {
-        if (pattern.every(item => GameBoard.getBoardField(item) === 'X' || GameBoard.getBoardField(item) === 'O')) {
-          winner = pattern[0];
-          result = `Winner is ${winner}!`;
-          finish();
-          return winner;
-        }
+    let winner = null;
+    for (const pattern of winnerPattern) {
+      if (pattern.every(item => GameBoard.getBoardField(item) === 'X')) {
+        winner = GameBoard.getBoardField(pattern[0]);
+      } else if (pattern.every(item => GameBoard.getBoardField(item) === 'O')) {
+        winner = GameBoard.getBoardField(pattern[0]);
+      }
 
-        if (GameBoard.freeTilesCount() === 0 && !winner) {
-          result = 'Tie!';
-          finish();
-          return 'tie';
-        }
+      if (winner) message = `Winner is ${winner}!`;
+
+      if (GameBoard.freeTilesCount() === 0 && !winner) {
+        message = 'Tie!';
+        return 'tie';
       }
     }
 
-    return false;
+    return winner;
   };
 
-  const getWinner = () => winner;
+  const miniMax = (board, maximizing) => {
+    let result = checkWin();
+    if (result) return scores[result];
+
+    if (maximizing) {
+      let bestScore = -Infinity;
+      board.map((tile, index) => {
+        if (tile === '') {
+          board[index] = computer.getMarker();
+          let score = miniMax(board, false);
+          // console.log(score);
+          board[index] = '';
+          bestScore = Math.max(score, bestScore);
+        }
+      });
+
+      return bestScore;
+    } else {
+      let bestScore = Infinity;
+      board.map((tile, index) => {
+        if (tile === '') {
+          board[index] = human.getMarker();
+          let score = miniMax(board, true);
+          board[index] = '';
+          bestScore = Math.min(score, bestScore);
+        }
+      });
+
+      return bestScore;
+    }
+  };
 
   const getResult = () => result;
 
-  const setMoveNo = () => moveNo++;
+  const setScores = (x, o) => {
+    scores.X = x;
+    scores.O = o;
+  };
 
-  const getMoveNo = () => moveNo;
+  const getScores = () => scores;
 
-  const finish = () => end = true;
-
-  return { start, checkWin, getWinner, getResult, setMoveNo, getMoveNo };
+  return { start, checkWin, miniMax, getResult, setScores, getScores };
 })();
 
 const DisplayController = (() => {
@@ -145,12 +168,32 @@ const Player = (marker) => {
 
   const markTheBoard = (pos) => {
     GameBoard.setBoard(pos, getMarker());
-    Game.setMoveNo();
     Game.checkWin();
     DisplayController.renderBoard();
-  }
+  };
 
-  return { getMarker, markTheBoard };
+  const bestMove = async () => {
+    let bestScore = -Infinity;
+    let move;
+
+    GameBoard.getBoard().map((tile, index) => {
+      if (tile === '') {
+        GameBoard.setBoard(index, computer.getMarker());
+        let score = Game.miniMax(GameBoard.getBoard(), false);
+        GameBoard.setBoard(index, '');
+        if (score > bestScore) {
+          bestScore = score;
+          move = index;
+        }
+      }
+    });
+
+    return new Promise((resolve) => {
+      setTimeout(resolve(GameBoard.setBoard(move, computer.getMarker())), 200);
+    });
+  };
+
+  return { getMarker, markTheBoard, bestMove };
 };
 
 DisplayController.createBoard();
@@ -165,13 +208,15 @@ let human, computer;
 
 // Select Player Marker
 const playerSelection = document.querySelector('#tictactoe');
-playerSelection.addEventListener('click', (e) => {
+playerSelection.addEventListener('click', async (e) => {
   if (e.target.className === 'x-button') {
     [human, computer] = [Player('X'), Player('O')];
+    Game.setScores(1, 0);
     DisplayController.removeMarkerSelection();
     return;
   } else if (e.target.className === 'o-button') {
     [human, computer] = [Player('O'), Player('X')];
+    Game.setScores(0, 1);
     DisplayController.removeMarkerSelection();
     return;
   }
@@ -179,4 +224,5 @@ playerSelection.addEventListener('click', (e) => {
   const clickedTileHTML = e.target;
   const clickedTileNo = clickedTileHTML.getAttribute('data-no');
   human.markTheBoard(clickedTileNo);
+  await computer.bestMove();
 });
