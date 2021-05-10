@@ -23,18 +23,32 @@ const Game = (() => {
   let started = false;
   let ended = false;
   let message = '';
-  let counter = 0;
   const scores = {
     X: -1,
     O: 1,
     tie: 0
   };
 
-  const selectPlayer = () => {
+  const startPressed = () => {
     GameBoard.clearBoard();
     DisplayController.renderBoard();
-    DisplayController.markerSelection();
-  }
+    DisplayController.playerSelection();
+  };
+
+  const selectPlayer = (human) => {
+    let computer;
+    if (human === 'X') {
+      Game.setScores(-1, 1);
+      computer = 'O';
+    } else {
+      Game.setScores(1, -1);
+      computer = 'X';
+    }
+    DisplayController.removeOverlay();
+    Game.start();
+    DisplayController.setRestartButton();
+    return [Player(human), Player(computer)];
+  };
 
   const start = () => [started, ended] = [true, false];
 
@@ -44,7 +58,7 @@ const Game = (() => {
 
   const isOver = () => ended === true;
 
-  const getCounter = () => counter;
+  const getMessage = () => message;
 
   const checkWin = () => {
     let winner = null;
@@ -54,9 +68,9 @@ const Game = (() => {
       } else if (pattern.every(item => GameBoard.getBoardField(item) === 'O')) {
         winner = GameBoard.getBoardField(pattern[0]);
       }
-      
+
       if (winner) {
-        message = `Winner is ${winner}!`;
+        message = `Player ${winner} is winner!`;
       }
 
       if (GameBoard.freeTilesCount() === 0 && !winner) {
@@ -69,7 +83,6 @@ const Game = (() => {
   };
 
   const miniMax = (board, isMaximizing) => {
-    ++counter;
     let result = checkWin();
     if (result) return scores[result];
 
@@ -110,7 +123,7 @@ const Game = (() => {
 
   const getScores = () => scores;
 
-  return { selectPlayer, start, finish, isStarted, isOver, checkWin, miniMax, getResult, setScores, getScores, getCounter };
+  return { startPressed, selectPlayer, start, finish, isStarted, isOver, checkWin, miniMax, getResult, setScores, getScores, getMessage };
 })();
 
 const DisplayController = (() => {
@@ -138,19 +151,13 @@ const DisplayController = (() => {
     });
   };
 
-  const markerSelection = () => {
+  const playerSelection = () => {
     const overlay = document.querySelector('#tictactoe .overlay');
 
     if (overlay === null) {
       const board = document.querySelector('#tictactoe');
 
-      const overlay = document.createElement('div');
-      overlay.className = 'overlay';
-
-      const labelPlayerSelection = document.createElement('span');
-      labelPlayerSelection.textContent = 'Select Player'
-      overlay.appendChild(labelPlayerSelection);
-
+      const overlay = createOverlay('Select Player');
       const buttonWrapper = document.createElement('div');
 
       const xButton = document.createElement('button');
@@ -170,13 +177,38 @@ const DisplayController = (() => {
     }
   };
 
-  const removeMarkerSelection = () => {
-    const board = document.querySelector('#tictactoe');
-    const markerSelectionHTML = board.querySelector('.overlay');
-    board.removeChild(markerSelectionHTML);
+  const winMessage = () => {
+    let overlay = document.querySelector('#tictactoe .overlay');
+
+    if (overlay === null) {
+      const board = document.querySelector('#tictactoe');
+      overlay = createOverlay(Game.getMessage());
+      board.appendChild(overlay);
+    }
   };
 
-  return { createBoard, renderBoard, markerSelection, removeMarkerSelection };
+  const createOverlay = (message) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+
+    const overlayText = document.createElement('span');
+    overlayText.textContent = message;
+    overlay.appendChild(overlayText);
+
+    return overlay;
+  };
+
+  const removeOverlay = () => {
+    const board = document.querySelector('#tictactoe');
+    const playerSelectionHTML = board.querySelector('.overlay');
+    board.removeChild(playerSelectionHTML);
+  };
+
+  const setRestartButton = () => {
+    document.querySelector('#start button').textContent = "Restart";
+  };
+
+  return { createBoard, renderBoard, playerSelection, winMessage, createOverlay, removeOverlay, setRestartButton };
 })();
 
 const Player = (marker) => {
@@ -185,7 +217,7 @@ const Player = (marker) => {
   const markTheBoard = (pos) => {
     if (!GameBoard.getBoardField(pos)) {
       GameBoard.setBoardField(pos, getMarker());
-      Game.checkWin() && Game.finish();
+      Game.checkWin() && Game.finish() && DisplayController.winMessage();
       DisplayController.renderBoard();
     }
   };
@@ -205,9 +237,9 @@ const Player = (marker) => {
         }
       }
     });
-    
+
     GameBoard.setBoardField(move, getMarker());
-    Game.checkWin() && Game.finish();
+    Game.checkWin() && Game.finish() && DisplayController.winMessage();
 
     return new Promise((resolve) => {
       setTimeout(resolve(DisplayController.renderBoard()), 200);
@@ -222,7 +254,8 @@ DisplayController.createBoard();
 // Start Game
 const startButton = document.querySelector('#start button');
 startButton.addEventListener('click', (e) => {
-  Game.selectPlayer();
+  Game.startPressed();
+  Game.isOver() && DisplayController.removeOverlay();
 });
 
 let human, computer;
@@ -231,16 +264,11 @@ let human, computer;
 const playerSelection = document.querySelector('#tictactoe');
 playerSelection.addEventListener('click', async (e) => {
   if (e.target.className === 'x-button') {
-    [human, computer] = [Player('X'), Player('O')];
-    Game.setScores(-1, 1);
-    DisplayController.removeMarkerSelection();
-    Game.start();
+    [human, computer] = Game.selectPlayer('X');
     return;
   } else if (e.target.className === 'o-button') {
-    [human, computer] = [Player('O'), Player('X')];
-    Game.setScores(1, -1);
-    DisplayController.removeMarkerSelection();
-    Game.start();
+    [human, computer] = Game.selectPlayer('O');
+    await computer.bestMove();
     return;
   }
 
@@ -249,6 +277,5 @@ playerSelection.addEventListener('click', async (e) => {
     const clickedTileNo = clickedTileHTML.getAttribute('data-no');
     human.markTheBoard(clickedTileNo);
     await computer.bestMove();
-    console.log(Game.getCounter());
   }
 });
