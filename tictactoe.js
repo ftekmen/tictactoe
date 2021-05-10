@@ -25,8 +25,8 @@ const Game = (() => {
   let message = '';
   let counter = 0;
   const scores = {
-    X: 1,
-    O: -1,
+    X: -1,
+    O: 1,
     tie: 0
   };
 
@@ -232,13 +232,13 @@ const playerSelection = document.querySelector('#tictactoe');
 playerSelection.addEventListener('click', async (e) => {
   if (e.target.className === 'x-button') {
     [human, computer] = [Player('X'), Player('O')];
-    Game.setScores(1, 0);
+    Game.setScores(-1, 1);
     DisplayController.removeMarkerSelection();
     Game.start();
     return;
   } else if (e.target.className === 'o-button') {
     [human, computer] = [Player('O'), Player('X')];
-    Game.setScores(0, 1);
+    Game.setScores(1, -1);
     DisplayController.removeMarkerSelection();
     Game.start();
     return;
