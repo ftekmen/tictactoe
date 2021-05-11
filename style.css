@@ -2,6 +2,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: 'Itim', cursive;
 }
 body {
   display: grid;
@@ -20,7 +21,6 @@ button {
 }
 
 #start {
-  border: 1px solid #ccc;
   padding: 1rem;
   margin-bottom: 1rem;
   display: grid;
@@ -28,6 +28,7 @@ button {
 }
 #start button {
   padding: 1rem 2rem;
+  font-size: 1.2rem;
 }
 
 .overlay {
@@ -51,7 +52,7 @@ button {
 #tictactoe {
   display: grid;
   place-items: center;
-  grid-template: repeat(3, 100px) / repeat(3, 100px);
+  grid-template: repeat(3, minmax(120px, 200px)) / repeat(3, minmax(120px, 200px));
   position: relative;
 }
 #tictactoe .tile {
@@ -65,4 +66,5 @@ button {
   place-items: center;
   width: 100%;
   height: 100%;
+  font-size: 2rem;
 }

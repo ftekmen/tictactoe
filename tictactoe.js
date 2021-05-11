@@ -72,11 +72,11 @@ const Game = (() => {
       if (winner) {
         message = `Player ${winner} is winner!`;
       }
+    }
 
-      if (GameBoard.freeTilesCount() === 0 && !winner) {
-        message = 'Tie!';
-        return 'tie';
-      }
+    if (GameBoard.freeTilesCount() === 0 && !winner) {
+      message = 'Tie!';
+      return 'tie';
     }
 
     return winner;
@@ -205,7 +205,7 @@ const DisplayController = (() => {
   };
 
   const setRestartButton = () => {
-    document.querySelector('#start button').textContent = "Restart";
+    document.querySelector('#start button').textContent = "Restart Game";
   };
 
   return { createBoard, renderBoard, playerSelection, winMessage, createOverlay, removeOverlay, setRestartButton };
@@ -217,12 +217,12 @@ const Player = (marker) => {
   const markTheBoard = (pos) => {
     if (!GameBoard.getBoardField(pos)) {
       GameBoard.setBoardField(pos, getMarker());
-      Game.checkWin() && Game.finish() && DisplayController.winMessage();
       DisplayController.renderBoard();
+      Game.checkWin() && Game.finish() && DisplayController.winMessage();
     }
   };
 
-  const bestMove = async () => {
+  const bestMove = () => {
     let bestScore = -Infinity;
     let move;
 
@@ -239,11 +239,8 @@ const Player = (marker) => {
     });
 
     GameBoard.setBoardField(move, getMarker());
+    DisplayController.renderBoard();
     Game.checkWin() && Game.finish() && DisplayController.winMessage();
-
-    return new Promise((resolve) => {
-      setTimeout(resolve(DisplayController.renderBoard()), 200);
-    });
   };
 
   return { getMarker, markTheBoard, bestMove };
@@ -254,28 +251,31 @@ DisplayController.createBoard();
 // Start Game
 const startButton = document.querySelector('#start button');
 startButton.addEventListener('click', (e) => {
-  Game.startPressed();
   Game.isOver() && DisplayController.removeOverlay();
+  Game.startPressed();
 });
 
 let human, computer;
 
 // Select Player Marker
 const playerSelection = document.querySelector('#tictactoe');
-playerSelection.addEventListener('click', async (e) => {
+playerSelection.addEventListener('click', (e) => {
   if (e.target.className === 'x-button') {
     [human, computer] = Game.selectPlayer('X');
     return;
   } else if (e.target.className === 'o-button') {
     [human, computer] = Game.selectPlayer('O');
-    await computer.bestMove();
+    computer.bestMove();
     return;
   }
+
+  if (e.target.className === 'tile' && e.target.textContent !== '') return;
 
   if (Game.isStarted() && !Game.isOver()) {
     const clickedTileHTML = e.target;
     const clickedTileNo = clickedTileHTML.getAttribute('data-no');
     human.markTheBoard(clickedTileNo);
-    await computer.bestMove();
   }
+
+  Game.isStarted() && !Game.isOver() && computer.bestMove();
 });
