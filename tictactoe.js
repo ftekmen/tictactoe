@@ -1,5 +1,5 @@
 const GameBoard = (() => {
-  const board = Array(9).fill('X');
+  const board = Array(9).fill('•');
 
   const getBoard = () => board;
 
@@ -33,6 +33,8 @@ const Game = (() => {
     GameBoard.clearBoard();
     DisplayController.renderBoard();
     DisplayController.playerSelection();
+    Game.start();
+    DisplayController.setStartButton();
   };
 
   const selectPlayer = (human) => {
@@ -46,7 +48,6 @@ const Game = (() => {
     }
     DisplayController.removeOverlay();
     Game.start();
-    DisplayController.setRestartButton();
     return [Player(human), Player(computer)];
   };
 
@@ -204,11 +205,18 @@ const DisplayController = (() => {
     board.removeChild(playerSelectionHTML);
   };
 
-  const setRestartButton = () => {
-    document.querySelector('#start button').textContent = "Restart Game";
+  const setStartButton = () => {
+    const startButton = document.querySelector('#start');
+
+    if (Game.isStarted() || !Game.isOver()) {
+      startButton.className = 'start-secondary';
+      startButton.textContent = "Restart Game";
+    } else {
+      startButton.classList.remove('start-secondary');
+    }
   };
 
-  return { createBoard, renderBoard, playerSelection, winMessage, createOverlay, removeOverlay, setRestartButton };
+  return { createBoard, renderBoard, playerSelection, winMessage, createOverlay, removeOverlay, setStartButton };
 })();
 
 const Player = (marker) => {
@@ -249,10 +257,11 @@ const Player = (marker) => {
 DisplayController.createBoard();
 
 // Start Game
-const startButton = document.querySelector('#start button');
+const startButton = document.querySelector('#start');
 startButton.addEventListener('click', (e) => {
   Game.isOver() && DisplayController.removeOverlay();
   Game.startPressed();
+  DisplayController.setStartButton();
 });
 
 let human, computer;
@@ -269,7 +278,7 @@ playerSelection.addEventListener('click', (e) => {
     return;
   }
 
-  if (e.target.className === 'tile' && e.target.textContent !== '') return;
+  if (e.target.className !== 'tile' || (e.target.className === 'tile' && e.target.textContent !== '')) return;
 
   if (Game.isStarted() && !Game.isOver()) {
     const clickedTileHTML = e.target;
@@ -278,4 +287,5 @@ playerSelection.addEventListener('click', (e) => {
   }
 
   Game.isStarted() && !Game.isOver() && computer.bestMove();
+  DisplayController.setStartButton();
 });
