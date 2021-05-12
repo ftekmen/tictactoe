@@ -15,7 +15,14 @@ const GameBoard = (() => {
     }, 0);
   };
 
-  return { getBoard, getBoardField, setBoardField, clearBoard, freeTilesCount };
+  const getFreeTiles = () => {
+    return board.reduce((freeTiles, tile, index) => {
+      if (!tile) return [...freeTiles, index];
+      return freeTiles;
+    }, []);
+  };
+
+  return { getBoard, getBoardField, setBoardField, clearBoard, freeTilesCount, getFreeTiles };
 })();
 
 const Game = (() => {
@@ -28,6 +35,7 @@ const Game = (() => {
     O: 1,
     tie: 0
   };
+  let unbeatable = false;
 
   const startPressed = () => {
     GameBoard.clearBoard();
@@ -39,6 +47,7 @@ const Game = (() => {
 
   const selectPlayer = (human) => {
     let computer;
+
     if (human === 'X') {
       Game.setScores(-1, 1);
       computer = 'O';
@@ -46,18 +55,28 @@ const Game = (() => {
       Game.setScores(1, -1);
       computer = 'X';
     }
+
     DisplayController.removeOverlay();
-    Game.start();
+    Game.setUnbeatable(DisplayController.toggleStatus());
+    DisplayController.disableToggle(true);
+
     return [Player(human), Player(computer)];
   };
 
   const start = () => [started, ended] = [true, false];
 
-  const finish = () => [started, ended] = [false, true];
+  const finish = () => {
+    DisplayController.disableToggle(true);
+    return [started, ended] = [false, true];
+  }
 
   const isStarted = () => started === true;
 
   const isOver = () => ended === true;
+
+  const setUnbeatable = (val) => unbeatable = val;
+
+  const isUnbeatable = () => unbeatable;
 
   const getMessage = () => message;
 
@@ -124,7 +143,7 @@ const Game = (() => {
 
   const getScores = () => scores;
 
-  return { startPressed, selectPlayer, start, finish, isStarted, isOver, checkWin, miniMax, getResult, setScores, getScores, getMessage };
+  return { startPressed, selectPlayer, start, finish, isStarted, isOver, setUnbeatable, isUnbeatable, checkWin, miniMax, getResult, setScores, getScores, getMessage };
 })();
 
 const DisplayController = (() => {
@@ -216,7 +235,19 @@ const DisplayController = (() => {
     }
   };
 
-  return { createBoard, renderBoard, playerSelection, winMessage, createOverlay, removeOverlay, setStartButton };
+  const disableToggle = (toggle) => {
+    let toggleLabel = document.querySelector('.switch');
+    let toggleInput = document.querySelector('.switch input');
+
+    toggleInput.disabled = toggle;
+    toggleLabel.style.color = toggle ? '#ccc' : '#000';
+  };
+
+  const toggleStatus = () => {
+    return document.querySelector('.switch input').checked;
+  }
+
+  return { createBoard, renderBoard, playerSelection, winMessage, createOverlay, removeOverlay, setStartButton, disableToggle, toggleStatus };
 })();
 
 const Player = (marker) => {
@@ -246,6 +277,13 @@ const Player = (marker) => {
       }
     });
 
+    const freeTilesLength = GameBoard.getFreeTiles().length;
+    if (!Game.isUnbeatable() && freeTilesLength < 5) {
+      // console.log(GameBoard.getFreeTiles(), move);
+      move = GameBoard.getFreeTiles()[Math.floor(Math.random() * freeTilesLength)];
+      // console.log(move);
+    }
+
     GameBoard.setBoardField(move, getMarker());
     DisplayController.renderBoard();
     Game.checkWin() && Game.finish() && DisplayController.winMessage();
@@ -256,17 +294,24 @@ const Player = (marker) => {
 
 DisplayController.createBoard();
 
+let human, computer;
+
+// Beatable / Unbeatable
+const unbeatableToggle = document.querySelector('.switch');
+unbeatableToggle.addEventListener('click', (e) => {
+  Game.setUnbeatable(e.target.checked ? true : false);
+});
+
 // Start Game
 const startButton = document.querySelector('#start');
 startButton.addEventListener('click', (e) => {
   Game.isOver() && DisplayController.removeOverlay();
   Game.startPressed();
   DisplayController.setStartButton();
+  DisplayController.disableToggle(false);
 });
 
-let human, computer;
-
-// Select Player Marker
+// Select Player
 const playerSelection = document.querySelector('#tictactoe');
 playerSelection.addEventListener('click', (e) => {
   if (e.target.className === 'x-button') {
@@ -285,6 +330,8 @@ playerSelection.addEventListener('click', (e) => {
     const clickedTileNo = clickedTileHTML.getAttribute('data-no');
     human.markTheBoard(clickedTileNo);
   }
+
+  // console.log(Game.isUnbeatable());
 
   Game.isStarted() && !Game.isOver() && computer.bestMove();
   DisplayController.setStartButton();

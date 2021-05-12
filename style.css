@@ -42,13 +42,77 @@ button {
   font-size: var(--fs);
   border: 10px solid #ddd;
   border-radius: 40px;
-  transition: background-color 1s;
+  transition: background-color .4s;
 }
 #start:hover {
   background-color: var(--c);
 }
 .start-secondary {
   background-color: var(--c-hover);
+}
+
+.switch {
+  position: absolute;
+  top: -70px;
+  left: 110px;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+  transition: color .4s;
+}
+.switch::before {
+  content: 'Unbeatable';
+  position: absolute;
+  left: -115px;
+  top: -2px;
+  font-size: var(--fs);
+}
+.switch:has(input:disabled)::before {
+  color: #ccc;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+.switch input:checked:not(:disabled) + .slider {
+  background-color: var(--c);
+}
+.switch input:focus + .slider {
+  box-shadow: 0 0 1px var(--c);
+}
+.switch input:checked + .slider:before {
+  -webkit-transform: translateX(16px);
+  -ms-transform: translateX(16px);
+  transform: translateX(16px);
+}
+.slider.round {
+  border-radius: 24px;
+}
+.slider.round:before {
+  border-radius: 50%;
 }
 
 .overlay {
